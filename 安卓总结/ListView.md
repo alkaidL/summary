@@ -1,0 +1,78 @@
+# 七 ListView
+
+ 列表的显示需要三个元素：
+
+1. ListView：用来展示列表的View。
+
+2. 适配器：用来把数据映射到ListView上的中介。
+
+3. 数据：具体的将被映射的字符串，图片，或者基本组件。
+
+## 表头表尾分割线的设置
+
+ListView作为一个列表控件和普通的列表一样，可以设置表头与表尾以及分割线，属性如下：
+
+```java
+footerDividersEnabled:footerView(表尾)前绘制一个分隔条,默认为true
+headerDividersEnabled:是否在headerView(表头)前绘制一个分隔条,默认为true
+divider:设置分隔条,可以用颜色分割,也可以用drawable资源分割
+dividerHeight:设置分隔条的高度
+   
+设置ListView表头或者表尾的方法如下：
+   
+addHeaderView(View v)：添加headView(表头),括号中的参数是一个View对象
+addFooterView(View v)：添加footerView(表尾)，括号中的参数是一个View对象
+addHeaderView(headView, null, false)：和前面的区别：设置Header是否可以被选中
+addFooterView(View,view,false)：同上
+```
+
+## 性能优化
+
+getView()每次都将布局重新加载了，可通过convertView参数进行缓存
+
+getView()每次会调用findViewById()方法来获取一次控件的实例，可以自定义ViewHolder类对控件实例进行缓存
+
+```java
+public class FruitAdapter extends ArrayAdapter<Fruit> {
+    private int resource;
+    public FruitAdapter(@NonNull Context context, int resource, @NonNull List<Fruit> objects) {
+        super(context, resource, objects);
+        this.resource = resource;
+    }
+
+    @NonNull
+    @Override
+    public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
+        //获取当前项的Fruit实例
+        Fruit fruit = getItem(position);
+        //使用LayoutInflater为子项加载传入的布局
+        View view;
+        ViewHolder viewHolder;
+        //通过convertView将之前加载好的布局进行缓存以便重用
+        if (convertView == null) {
+            view = LayoutInflater.from(getContext()).inflate(resource, parent, false);
+            viewHolder = new ViewHolder();
+            viewHolder.fruitImage = view.findViewById(R.id.fruit_image);
+            viewHolder.fruitName = view.findViewById(R.id.fruit_name);
+            //将ViewHolder对象存储在View中
+            view.setTag(viewHolder);
+        } else {
+            view = convertView;
+            viewHolder = (ViewHolder) view.getTag();
+        }
+//        ImageView fruitImage = view.findViewById(R.id.fruit_image);
+//        TextView fruitName = view.findViewById(R.id.fruit_name);
+//        fruitImage.setImageResource(fruit.getImageId());
+//        fruitName.setText(fruit.getName());
+        viewHolder.fruitImage.setImageResource(fruit.getImageId());
+        viewHolder.fruitName.setText(fruit.getName());
+        return view;
+    }
+
+    //缓存控件
+    class ViewHolder {
+        ImageView fruitImage;
+        TextView fruitName;
+    }
+}
+```

@@ -1,0 +1,55 @@
+# 四 TextView/EditText/Button
+
+## TextView
+
+#### 带阴影的TextView
+
+- **android:shadowColor:**设置阴影颜色,需要与shadowRadius一起使用
+- **android:shadowRadius:**设置阴影的模糊程度,设为0.1就变成字体颜色了,建议使用3.0
+- **android:shadowDx:**设置阴影在水平方向的偏移,就是水平方向阴影开始的横坐标位置
+- **android:shadowDy:**设置阴影在竖直方向的偏移,就是竖直方向阴影开始的纵坐标位置
+
+#### 带边框的TextView
+
+如果想为TextView设置一个边框背景，如普通矩形边框或者圆角边框，可以自行编写一个ShapeDrawable的资源文件。然后TextView将background 设置为这个drawable资源即可。
+
+ 简单说下shapeDrawable资源文件的几个节点以及属性：
+
+`<solid android:color> = "xxx"` 这个是设置背景颜色的
+
+`<stroke android:width = "xdp" android:color="xxx">` 这个是设置边框的粗细,以及边框颜色的
+
+`<padding androidLbottom = "xdp"...>`  这个是设置边距的
+
+`<corners android:topLeftRadius="10px"...>` 这个是设置圆角的
+
+`<gradient>` 这个是设置渐变色的
+
+可选属性有: startColor:起始颜色 endColor:结束颜色 centerColor:中间颜色 angle:方向角度,等于0时,从左到右,然后逆时针方向转,当angle = 90度时从下往上 type:设置渐变的类型
+
+#### 带图片(drawableXxx)的TextView
+
+**基本用法：**
+
+设置图片的核心其实就是:**drawableXxx**;可以设置四个方向的图片: **drawableTop**(上),**drawableButtom**(下),**drawableLeft**(左),**drawableRight**(右) 
+
+另外,你也可以使用**drawablePadding**来设置图片与文字间的间距
+
+#### 使用autoLink属性识别链接类型
+
+当文字中出现了URL，E-Mail，电话号码，地图的时候，我们可以通过设置autoLink属性自动识别。当我们点击 文字中对应部分的文字，即可跳转至某默认APP，比如一串号码，点击后就跳转至拨号界面
+
+## EditText
+
+允许用户在控件里输入和编辑内容，并可在程序中对这些内容进行处理，比如用Button点击获取输入的内容
+
+可通过`android:hint="something"`在输入框里给出提示，通过`android:maxLines="2"`指定输入框最大行数为2
+
+## Button
+
+系统会对Button中的所有英文字母自动转换为大写，可通过`android:textAllCaps="false"`禁用
+
+配置的属性与TextView差不多
+
+可以通过匿名内部类来注册监听器，也可以使用实现View.OnClickListener接口的方式
+

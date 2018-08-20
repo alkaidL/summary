@@ -1,0 +1,28 @@
+# 十一 HandlerThread
+
+HandlerThread是Android API提供的一个方便、便捷的类，使用它我们可以快速的创建一个带有Looper的线程。Looper可以用来创建Handler实例。 
+
+## 使用方法
+
+1. 创建HandlerThread线程
+2. 运行线程
+3. 获取HandlerThread线程中的Looper实例
+4. 通过Looper实例创建Handler实例，从而使子线程的Handler与该线程连接到一起
+
+## 使用HandlerThread几大优点
+
+1. 制作一个后台异步线程，需要的时候就可以丢一个任务给它，使用比较灵活
+2. Android系统提供的，使用简单方便，内部自己封装了Looper+Handler机制
+3. 可以代替Thread + Looper + Handler的写法
+4. 可以避免项目中随处可见的 new Thread().start()增加系统开销
+
+## 使用HandlerThread注意
+
+1. HandlerThread适合在只需要在一个工作线程(非UI线程)+任务的等待队列的形式,优点是不会有堵塞，减少了对性能的消耗，缺点是不能同时进行多任务的处理,需要等待进行处理。可以当做一个轻量级的线程池来用
+2. 要自己控制好合适的生命周期，启动和结束都要自己控制
+
+## HandlerThread与Handler的区别
+
+Handler异步更新UI是子线程与UI主线程之间的通信
+
+HandlerThread可以做到子线程与子线程之间的通信

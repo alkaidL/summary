@@ -1,0 +1,80 @@
+# 十四 AIDL
+
+AIDL 意思即 Android Interface Definition Language，翻译过来就是 Android 接口定义语言，是用于定义服务端和客户端通信接口的一种描述语言，可以拿来生成用于 IPC 的代码。从某种意义上说 AIDL 其实是一个模板，因为在使用过程中，实际起作用的并不是 AIDL 文件，而是据此而生成的一个 IInterface 的实例代码，AIDL 其实是为了避免我们重复编写代码而出现的一个模板
+
+设计 AIDL 这门语言的目的就是为了实现进程间通信。在 Android 系统中，每个进程都运行在一块独立的内存中，在其中完成自己的各项活动，与其他进程都分隔开来。可是有时候我们又有应用间进行互动的需求，比较传递数据或者任务委托等，AIDL 就是为了满足这种需求而诞生的。通过 AIDL，可以在一个进程中获取另一个进程的数据和调用其暴露出来的方法，从而满足进程间通信的需求
+
+通常，暴露方法给其他应用进行调用的应用称为服务端，调用其他应用的方法的应用称为客户端，客户端通过绑定服务端的Service来进行交互
+
+## AIDL实现原理
+
+#### 实现原理
+
+定义好AIDL文件只是方便stuido生成所需的Binder类。AIDL并不是必须的文件，因为Binder类我们也可以手写出来，所以最重要的还是Binder的知识点，其他一些IPC方式其实都是通过Binder来实现的，比如说Messager，Bundle，ContentProvider，只是它们的封装方式不一样而已。
+
+- `asInterface()`方法用于将服务端的Binder对象转换为客户端所需要的接口对象，该过程区分进程，如果进程一样，就返回服务端Stub对象本身，否则就返回封装后的Stub.Proxy对象。
+- `onTransact()`方法是运行在服务端的Binder线程中的，当客户端发起远程请求后，在底层封装后会交由此方法来处理。通过code来区分客户端请求的方法。如果该方法返回false，客户端的请求就会失败。一般可以用来做权限控制。
+
+#### 定向Tag
+
+接口中的参数除了aidl支持的类型，其他类型必须标识其方向，因为服务端收到序列化后的对象跟客户端的就是**两个对象**，仅仅内容相同。具体如下：
+
+- in 为定向 tag 的话表现为服务端将会接收到一个那个对象的完整数据，但是客户端的那个对象**不会**因为服务端对传参的修改而发生变动
+- out 的话表现为服务端将会接收到那个对象的**空对象**，但是在服务端对接收到的空对象有任何**修改**之后客户端将会同步变动
+- inout 为定向 tag 的情况下，服务端将会接收到客户端传来对象的完整信息，并且客户端将会同步服务端对该对象的任何变动
+
+## AIDL传递数据类型
+
+基本类型（int,long,char,boolean等）,String,CharSequence,List,Map，其他类型必须使用import导入，即使它们可能在同一个包里。
+
+## AIDL传递复杂数据类型
+
+通过AIDL传输非基本类型的对象，被传输的对象需要**序列化**，序列化功能java有提供，但是android sdk提供了更轻量级更方便的方法，即实现Parcelable接口。要实现如下函数：
+
+- `readFromParcel()` : 从parcel中读取对象
+- `writeToParcel()`：将对象写入parcel
+- `describeContents()`：返回0即可
+- `Parcelable.Creator<Student> CREATOR`：自动生成
+
+需要注意的是，readFromParcel和writeToParcel操作数据成员的**顺序要一致**
+
+## 回调客户端
+
+#### 场景
+
+客户端要执行的任务比较耗时，如果一直等待服务端的返回值会造成ANR，以注册回调函数的方式可以解决这一问题，这样耗时任务完成后服务端再把结果给客户端。
+
+#### ANR
+
+客户端在调用远程服务的方法时，被调用的方法是运行在服务端的 Binder 线程池中，同时客户端线程会被挂起，这时如果服务端方法执行比较耗时，就会导致客户端线程被堵塞，这可能会导致 ANR。所以如果确定远程方法是耗时的，就要避免在 UI 线程中去调用远程方法，而应把调用操作放到子线程执行。
+
+此外，客户端的 `ServiceConnection`对象的 `onServiceConnected` 和 `onServiceDisconnected`都是运行在 UI 线程中，所以也不能用于调用耗时的远程方法。 而由于服务端的方法本身就运行在服务端的 Binder 线程池中，所以服务端方法本身就可以用于执行耗时方法，不必再在服务端方法中开线程去执行异步任务。
+
+同理，当服务端需要调用客户端的回调接口中的方法时，被调用的方法也运行在客户端的 Binder 线程池中，所以一样不可以在服务端中调用客户端的耗时方法。
+
+#### 注册和解除回调函数
+
+为了能够无误地注册和解除注册回调函数，系统为开发者提供了 `RemoteCallbackList`，`RemoteCallbackList` 是一个泛型类，系统专门提供用于删除跨进程回调函数，支持管理任意的 AIDL 接口，因为所有的 AIDL 接口都继承自 `IInterface`，而  `RemoteCallbackList` 对于泛型类型有限制：
+
+`public class RemoteCallbackList<E extends IInterface>`
+
+`RemoteCallbackList` 在内部有一个 `ArrayMap` 用于保存所有的 AIDL 回调接口：
+
+`ArrayMap<IBinder, Callback> mCallbacks  = new ArrayMap<IBinder, Callback>();`
+
+其中 `Callback` 封装了真正的远程回调函数，因为即使回调函数经过序列化和反序列化后会生成不同的对象，但这些对象的底层 Binder 对象是同一个。利用这个特征就可以通过遍历 `RemoteCallbackList` 的方式删除注册的回调函数了。
+此外，当客户端进程终止后，`RemoteCallbackList` 会自动移除客户端所注册的回调接口。而且 `RemoteCallbackList` 内部自动实现了线程同步的功能，所以我们使用它来注册和解除注册时，不需要进行线程同步。
+
+#### 四个步骤
+
+1. 自定义回调接口.aidl。 
+2. AIDL服务.aidl提供接口给客户端注册和注销此回调。 
+3. AIDL服务.java的具体实现。 
+4. 客户端创建回调接口的实现对象，并注册到AIDL。 
+
+## 使用场景
+
+官方文档特别提醒我们何时使用AIDL是必要的：只有你允许客户端从不同的应用程序为了进程间的通信而去访问你的service，以及想在你的service处理多线程。
+
+- 如果**不需要**进行不同应用程序间的并发通信(IPC)，you should create your interface by implementing a **Binder**
+- 想进行IPC，但不需要处理多线程的，则implement your interface using a **Messenger**。

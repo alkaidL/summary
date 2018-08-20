@@ -1,0 +1,59 @@
+# 十 Handler
+
+## **Handler**
+
+　　Handler，它直接继承自Object，一个Handler允许发送和处理Message或者Runnable对象，并且会关联到主线程的MessageQueue中。每个Handler具有一个单独的线程，并且关联到一个消息队列的线程，就是说一个Handler有一个固有的消息队列。当实例化一个Handler的时候，它就承载在一个线程和消息队列的线程，这个Handler可以把Message或Runnable压入到消息队列，并且从消息队列中取出Message或Runnable，进而操作它们。
+
+　　Handler主要有两个作用：
+
+- 在工作线程中发送消息。
+- 在UI线程中获取、处理消息。
+
+　　上面介绍到Handler可以把一个Message对象或者Runnable对象压入到消息队列中，进而在UI线程中获取Message或者执行Runnable对象，所以Handler把压入消息队列有两大体系，Post和sendMessage：
+
+- Post：Post允许把一个Runnable对象入队到消息队列中。它的方法有：post(Runnable)、postAtTime(Runnable,long)、postDelayed(Runnable,long)。
+- sendMessage：sendMessage允许把一个包含消息数据的Message对象压入到消息队列中。它的方法有：sendEmptyMessage(int)、sendMessage(Message)、sendMessageAtTime(Message,long)、sendMessageDelayed(Message,long)。
+
+　　从上面的各种方法可以看出，不管是post还是sendMessage都具有多种方法，它们可以设定Runnable对象和Message对象被入队到消息队列中，是立即执行还是延迟执行。
+
+## Post
+
+　　对于Handler的Post方式来说，它会传递一个Runnable对象到消息队列中，在这个Runnable对象中，重写run()方法。一般在这个run()方法中写入需要在UI线程上的操作。
+
+　　在Handler中，关于Post方式的方法有：
+
+- boolean post(Runnable r)：把一个Runnable入队到消息队列中，UI线程从消息队列中取出这个对象后，立即执行。
+- boolean postAtTime(Runnable r,long uptimeMillis)：把一个Runnable入队到消息队列中，UI线程从消息队列中取出这个对象后，在特定的时间执行。
+- boolean postDelayed(Runnable r,long delayMillis)：把一个Runnable入队到消息队列中，UI线程从消息队列中取出这个对象后，延迟delayMills秒执行。
+- void removeCallbacks(Runnable r)：从消息队列中移除一个Runnable对象。
+
+## sendMessage
+
+　　Handler如果使用sendMessage的方式把消息入队到消息队列中，需要传递一个Message对象，而在Handler中，需要重写handleMessage()方法，用于获取工作线程传递过来的消息，此方法运行在UI线程上。下面先介绍一下Message。
+
+　　Message是一个final类，所以不可被继承。Message封装了线程中传递的消息，如果对于一般的数据，Message提供了getData()和setData()方法来获取与设置数据，其中操作的数据是一个Bundle对象，这个Bundle对象提供一系列的getXxx()和setXxx()方法用于传递基本数据类型的键值对，对于基本数据类型，使用起来很简单，这里不再详细讲解。而对于复杂的数据类型，如一个对象的传递就要相对复杂一些。在Bundle中提供了两个方法，专门用来传递对象的，但是这两个方法也有相应的限制，需要实现特定的接口，当然，一些Android自带的类，其实已经实现了这两个接口中的某一个，可以直接使用。方法如下：
+
+- putParcelable(String key,Parcelable value)：需要传递的对象类实现Parcelable接口。
+- pubSerializable(String key,Serializable value)：需要传递的对象类实现Serializable接口。
+
+　　还有另外一种方式在Message中传递对象，那就是使用Message自带的obj属性传值，它是一个Object类型，所以可以传递任意类型的对象，Message自带的有如下几个属性：
+
+- int arg1：参数一，用于传递不复杂的数据，复杂数据使用setData()传递。
+- int arg2：参数二，用于传递不复杂的数据，复杂数据使用setData()传递。
+- Object obj：传递一个任意的对象。
+- int what：定义的消息码，一般用于设定消息的标志。
+
+ 　　对于Message对象，一般并不推荐直接使用它的构造方法得到，而是建议通过使用Message.obtain()这个静态的方法或者Handler.obtainMessage()获取。Message.obtain()会从消息池中获取一个Message对象，如果消息池中是空的，才会使用构造方法实例化一个新Message，这样有利于消息资源的利用。并不需要担心消息池中的消息过多，它是有上限的，上限为10个。Handler.obtainMessage()具有多个重载方法，如果查看源码，会发现其实Handler.obtainMessage()在内部也是调用的Message.obtain()。
+
+​	Message.obtain()方法具有多个重载方法，大致可以分为为两类，一类是无需传递Handler对象，对于这类的方法，当填充好消息后，需要调用Handler.sendMessage()方法来发送消息到消息队列中。第二类需要传递一个Handler对象，这类方法可以直接使用Message.sendToTarget()方法发送消息到消息队列中，这是因为在Message对象中有一个私有的Handler类型的属性Target，当obtain方法传递进一个Handler对象的时候，会给Target属性赋值，当调用sendToTarget()方法的时候，实际在它内部还是调用的Target.sendMessage()方法。
+
+　　在Handler中，也定义了一些发送空消息的方法，如：sendEmptyMessage(int what)、sendEmptyMessageDelayed(int what,long delayMillis)，看似这些方法没有使用Message就可以发送一个消息，但是如果查看源码就会发现，其实内部也是从Message.obtain()方法中获取一个Message对象，然后给属性赋值，最后使用sendMessage()发送消息到消息队列中。
+
+　　Handler中，与Message发送消息相关的方法有：
+
+- Message obtainMessage()：获取一个Message对象。
+- boolean sendMessage()：发送一个Message对象到消息队列中，并在UI线程取到消息后，立即执行。
+- boolean sendMessageDelayed()：发送一个Message对象到消息队列中，在UI线程取到消息后，延迟执行。
+- boolean sendEmptyMessage(int what)：发送一个空的Message对象到队列中，并在UI线程取到消息后，立即执行。
+- boolean sendEmptyMessageDelayed(int what,long delayMillis)：发送一个空Message对象到消息队列中，在UI线程取到消息后，延迟执行。
+- void removeMessage()：从消息队列中移除一个未响应的消息。

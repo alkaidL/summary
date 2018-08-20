@@ -1,0 +1,58 @@
+# 二 Activity生命周期
+
+## 返回栈
+
+安卓使用任务（Task）管理活动，一个任务就是一组存放在**返回栈**里的活动的集合。后进先出：新活动入栈顶，销毁时栈顶活动出栈
+
+## 活动状态
+
+1. #### 运行状态：一个活动位于栈顶时处于活动状态
+
+2. #### 暂停状态：不再处于栈顶但仍然可见时
+
+3. #### 停止状态：不再处于栈顶并且完全不可见时。系统会保存相应的状态和成员变量
+
+4. #### 销毁状态：从返回栈移除后。系统倾向于回收这种状态的活动
+
+## 活动的生存期
+
+#### 七个回调方法覆盖生命周期的每一环节：
+
+| 方法        | 说明                                                         | 是否能事后终止？ | 后接                       |
+| ----------- | ------------------------------------------------------------ | ---------------- | -------------------------- |
+| onCreate()  | 首次创建 Activity 时调用。 您应该在此方法中执行所有正常的静态设置 — 创建视图、将数据绑定到列表等等。 系统向此方法传递一个 Bundle 对象，其中包含 Activity 的上一状态，不过前提是捕获了该状态。始终后接 onStart()。 | 否               | onStart()                  |
+| onRestart() | 在 Activity 已停止并即将再次启动前调用。始终后接 onStart()   | 否               | onStart()                  |
+| onStart()   | 在 Activity 即将对用户可见之前调用。如果 Activity 转入前台，则后接 onResume()，如果 Activity 转入隐藏状态，则后接 onStop()。 | 否               | onResume()  或 onStop()    |
+| onResume()  | 在 Activity 即将开始与用户进行交互之前调用。 此时，Activity 处于 Activity 堆栈的顶层，并具有用户输入焦点。始终后接 onPause()。 | 否               | onPause()                  |
+| onPause()   | 当系统即将开始继续另一个 Activity 时调用。 此方法通常用于确认对持久性数据的未保存更改、停止动画以及其他可能消耗 CPU 的内容，诸如此类。 它应该非常迅速地执行所需操作，因为它返回后，下一个 Activity 才能继续执行。如果 Activity 返回前台，则后接 onResume()，如果 Activity 转入对用户不可见状态，则后接 onStop()。 | **是**           | onResume()  或 onStop()    |
+| onStop()    | 在 Activity 对用户不再可见时调用。如果 Activity 被销毁，或另一个 Activity（一个现有 Activity 或新 Activity）继续执行并将其覆盖，就可能发生这种情况。如果 Activity 恢复与用户的交互，则后接 onRestart()，如果 Activity 被销毁，则后接 onDestroy()。 | **是**           | onRestart() 或 onDestroy() |
+| onDestroy() | 在 Activity 被销毁前调用。这是 Activity 将收到的最后调用。 当 Activity 结束（有人对 Activity 调用了 finish()），或系统为节省空间而暂时销毁该 Activity 实例时，可能会调用它。 您可以通过 isFinishing() 方法区分这两种情形。 | **是**           | *无*                       |
+
+#### 三种生存期：	
+
+- **完整生存期**：发生在 `onCreate()` 调用与 `onDestroy()` 调用之间。 Activity 应在 `onCreate()` 中执行“全局”状态设置（例如定义布局），并释放 `onDestroy()` 中的所有其余资源。
+- **可见生存期**：发生在 `onStart()` 调用与 `onStop()` 调用之间。在这段时间，用户可以在屏幕上看到 Activity 并与其交互。 例如，当一个新 Activity 启动，并且此 Activity 不再可见时，系统会调用 `onStop()`。您可以在调用这两个方法之间保留向用户显示 Activity 所需的资源。 
+- **前台生存期**：发生在 `onResume()` 调用与 `onPause()` 调用之间。在这段时间，Activity 位于屏幕上的所有其他 Activity 之前，并具有用户输入焦点。 Activity 可频繁转入和转出前台。由于此状态可能经常发生转变，因此这两个方法中应采用适度轻量级的代码，以避免因转变速度慢而让用户等待。
+
+## 协调 Activity
+
+当一个 Activity 启动另一个 Activity 时，它们都会体验到生命周期转变。第一个 Activity 暂停并停止（但如果它在后台仍然可见，则不会停止）时，同时系统会创建另一个 Activity。 如果这些 Activity 共用保存到磁盘或其他地方的数据，必须了解的是，在创建第二个 Activity 前，第一个 Activity 不会完全停止。更确切地说，启动第二个 Activity 的过程与停止第一个 Activity 的过程存在重叠。
+
+生命周期回调的顺序经过明确定义，当两个 Activity 位于同一进程，并且由一个 Activity 启动另一个 Activity 时，其定义尤其明确。 以下是当 Activity A 启动 Activity B 时一系列操作的发生顺序：
+
+1. Activity A 的 `onPause()` 方法执行。
+2. Activity B 的 `onCreate()`、`onStart()` 和 `onResume()` 方法依次执行。（Activity B 现在具有用户焦点。）
+3. 然后，如果 Activity A 在屏幕上不再可见，则其 `onStop()` 方法执行。
+
+您可以利用这种可预测的生命周期回调顺序管理从一个 Activity 到另一个 Activity 的信息转变。 例如，如果您必须在第一个 Activity 停止时向数据库写入数据，以便下一个 Activity 能够读取该数据，则**应在** `onPause()` 而不是 `onStop()` 执行期间向数据库写入数据。
+
+## 保存Activity状态
+
+系统会先调用 `onSaveInstanceState()`，然后再使 Activity 变得易于销毁。系统会向该方法传递一个 `Bundle`，可以在其中使用 `putString()` 和 `putInt()` 等方法以名称-值对形式保存有关 Activity 状态的信息。然后，如果系统终止应用进程，并且用户返回 Activity，则系统会重建该 Activity，并将 `Bundle` 同时传给 `onCreate()` 和 `onRestoreInstanceState()`。
+
+当屏幕方向变化时，系统会销毁并重建 Activity，以便应用可供新屏幕配置使用的备用资源。 单凭这一理由， Activity 在重建时能否完全恢复其状态就显得非常重要，因为用户在使用应用时经常需要旋转屏幕。 
+
+#### tips：
+
+- 在xml中引用一个id使用@id/id_name语法，在xml中定义一个id则要使用@+id/id_name语法
+- 项目添加的任何资源都会在R文件中生成一个相应的资源id

@@ -1,0 +1,254 @@
+# 	二十五 Canvas与Paint
+
+- 绘制内容是根据**画布（Canvas）的规定**绘制在**屏幕**上的
+- 画布（Canvas）只是绘制时的规则，但内容实际上是绘制在屏幕上的
+
+## Canvas与Paint的关系、区别
+
+- Canvas - 名为**画布**，我们可以看作是一种处理过程，使用各种方法来管理Bitmap、GL或者Path路径，同时它可以配合Matrix矩阵类给图像做旋转、缩放等操作，同时Canvas类还提供了裁剪、选取等操作
+- Paint - 我们可以把它看做一个**画图工具**，比如画笔、画刷。他管理了每个画图工具的字体、颜色、样式
+
+## Canvas与Paint的常用方法
+
+### Paint
+
+##### 具体使用步骤
+
+- 创建一个画笔对象
+- 画笔设置，即设置绘制内容的具体效果（如颜色、大小等等）
+- 初始化画笔（尽量选择在View的构造函数）
+
+##### 常用方法
+
+```java
+	// 步骤1：创建一个画笔
+    private Paint mPaint = new Paint();
+
+    // 步骤2：初始化画笔
+    // 根据需求设置画笔的各种属性，具体如下：
+    private void initPaint() {
+
+        // 设置最基本的属性
+        // 设置画笔颜色
+        // 可直接引入Color类，如Color.red等
+        mPaint.setColor(int color);
+        // 设置画笔模式
+        mPaint.setStyle(Style style);
+        // Style有3种类型：
+        // 类型1：Paint.Style.FILLANDSTROKE（描边+填充）
+        // 类型2：Paint.Style.FILL（只填充不描边）
+        // 类型3：Paint.Style.STROKE（只描边不填充）
+        // 特别注意：前两种就相差一条边
+        // 若边细是看不出分别的；边粗就相当于加粗       
+
+        //设置画笔的粗细
+        mPaint.setStrokeWidth( float width)
+        // 如设置画笔宽度为10px
+        mPaint.setStrokeWidth(10f);
+
+        // 不常设置的属性
+        // 得到画笔的颜色     
+        mPaint.getColor()
+        // 设置Shader
+        // 即着色器，定义了图形的着色、外观
+        // 可以绘制出多彩的图形
+        // 具体请参考文章：http://blog.csdn.net/iispring/article/details/50500106
+        Paint.setShader(Shader shader)
+
+        //设置画笔的透明度、rgb值
+        mPaint.setARGB( int a, int r, int g, int b)
+        //设置透明度
+        mPaint.setAlpha( int a)
+        //得到画笔的Alpha值
+        mPaint.getAlpha()
+
+
+        // 对字体进行设置（大小、颜色）
+        //设置字体大小
+        mPaint.setTextSize( float textSize)
+
+        // 文字Style三种模式：
+        mPaint.setStyle(Style style);
+        // 类型1：Paint.Style.FILLANDSTROKE（描边+填充）
+        // 类型2：Paint.Style.FILL（只填充不描边）
+        // 类型3：Paint.Style.STROKE（只描边不填充） 
+
+        // 设置对齐方式   
+        setTextAlign（）
+        // LEFT：左对齐
+        // CENTER：居中对齐
+        // RIGHT：右对齐
+
+        //设置文本的下划线
+        setUnderlineText( boolean underlineText)
+
+        //设置文本的删除线
+        setStrikeThruText( boolean strikeThruText)
+
+        //设置文本粗体
+        setFakeBoldText( boolean fakeBoldText)
+
+        // 设置斜体
+        Paint.setTextSkewX(-0.5f);
+
+        // 设置文字阴影
+        Paint.setShadowLayer(5, 5, 5, Color.YELLOW);
+    }
+
+    // 步骤3：在构造函数中初始化
+    public CarsonView(Context context, AttributeSet attrs) {
+        super(context, attrs);
+        initPaint();
+    }
+```
+
+### Canvas
+
+##### 获取Canvas对象的方法
+
+```java
+// 方法1
+// 利用空构造方法直接创建对象
+Canvas canvas = new Canvas()；
+
+// 方法2
+// 通过传入装载画布Bitmap对象创建Canvas对象
+// Bitmap上存储所有绘制在Canvas的信息
+Canvas canvas = new Canvas(bitmap)
+
+// 方法3
+// 通过重写View.onDraw（）创建Canvas对象
+// 在该方法里可以获得这个View对应的Canvas对象
+@Override
+protected void onDraw(Canvas canvas) {
+    super.onDraw(canvas);
+    //在这里获取Canvas对象
+}
+
+// 方法4
+// 在SurfaceView里画图时创建Canvas对象
+SurfaceView surfaceView = new SurfaceView(this);
+// 从SurfaceView的surfaceHolder里锁定获取Canvas
+SurfaceHolder surfaceHolder = surfaceView.getHolder();
+//获取Canvas
+Canvas c = surfaceHolder.lockCanvas();
+// ...（进行Canvas操作）
+// Canvas操作结束之后解锁并执行Canvas
+urfaceHolder.unlockCanvasAndPost(c);
+```
+
+官方推荐方法**4**来创建并获取Canvas，原因：
+
+- SurfaceView里有一条线程是专门用于画图，所以方法4的**画图性能最好，并适用于高质量的、刷新频率高的图形** 
+- 方法3刷新频率低于方法4，**但系统花销小，节省资源**
+
+##### 绘制方法
+
+![img](https://upload-images.jianshu.io/upload_images/944365-ff8cc50eb32128a8.png) 
+
+## 常用MaskFilter的使用
+
+通过`Paint.setMaskFilter()`方法设置MaskFilter
+
+### BlurMaskFilter(模糊效果)
+
+构造函数：**BlurMaskFilter(10f,BlurMaskFilter.Blur.NORMAL);**
+
+我们可以控制的就是这两个参数：
+
+**第一个参数**：指定模糊边缘的半径；
+
+**第二个参数**：指定模糊的风格，可选值有：
+
+- BlurMaskFilter.Blur.**NORMAL**：内外模糊
+- BlurMaskFilter.Blur.**OUTER**：外部模糊
+- BlurMaskFilter.Blur.**INNER**：内部模糊
+- BlurMaskFilter.Blur.**SOLID**：内部加粗，外部模糊
+
+### EmbossMaskFilter(浮雕效果)
+
+构造方法：**EmbossMaskFilter(float[] direction, float ambient, float specular, float blurRadius)** 参数依次是：
+
+**direction**：浮点型数组，用于控制x,y,z轴的光源方向
+
+**ambient**：设置环境光亮度，0到1之间
+
+**specular**：镜面反射系数
+
+**blurRadius**：模糊半径
+
+### 注意事项
+
+需关闭硬件加速以使得MaskFilter生效
+
+## 不同PorterDuffXfermode所对应的叠加效果
+
+### Alpha 合成
+
+其实就是 「PorterDuff」 这个词所指代的算法。 「PorterDuff」 并不是一个具有实际意义的词组，而是两个人的名字（准确讲是姓）。这两个人当年共同发表了一篇论文，描述了 12 种将两个图像共同绘制的操作（即算法）。而这篇论文所论述的操作，都是关于 Alpha 通道（也就是我们通俗理解的「透明度」）的计算的，后来人们就把这类计算称为**Alpha 合成** ( Alpha Compositing ) 。 
+
+![img](https://ws3.sinaimg.cn/large/52eb2279ly1fig6im3hhcj20o50zt7bj.jpg) 
+
+### 混合
+
+也就是 Photoshop 等制图软件里都有的那些混合模式（`multiply` `darken` `lighten` 之类的）。这一类操作的是颜色本身而不是 `Alpha` 通道，并不属于 `Alpha` 合成，所以和 Porter 与 Duff 这两个人也没什么关系，不过为了使用的方便，它们同样也被 Google 加进了 `PorterDuff.Mode` 里。 
+
+![img](https://ws3.sinaimg.cn/large/52eb2279ly1fig6iw04v0j20ny0hzmzj.jpg) 
+
+## ColorFilter的使用
+
+`ColorFilter` 这个类，它的名字已经足够解释它的作用：为绘制设置颜色过滤。颜色过滤的意思，就是为绘制的内容设置一个统一的过滤策略，然后 `Canvas.drawXXX()` 方法会对每个像素都进行过滤后再绘制出来。 
+
+### LightingColorFilter
+
+`LightingColorFilter` 是用来模拟简单的光照效果的。
+
+`LightingColorFilter` 的构造方法是 `LightingColorFilter(int mul, int add)` ，参数里的 `mul` 和 `add` 都是和颜色值格式相同的 int 值，其中 `mul` 用来和目标像素相乘，`add` 用来和目标像素相加：
+
+```java
+R' = R * mul.R / 0xff + add.R  
+G' = G * mul.G / 0xff + add.G  
+B' = B * mul.B / 0xff + add.B  
+```
+
+一个「保持原样」的「**基本 LightingColorFilter** 」，`mul` 为 `0xffffff`，`add` 为 `0x000000`（也就是0），那么对于一个像素，它的计算过程就是：
+
+```java
+R' = R * 0xff / 0xff + 0x0 = R // R' = R  
+G' = G * 0xff / 0xff + 0x0 = G // G' = G  
+B' = B * 0xff / 0xff + 0x0 = B // B' = B  
+```
+
+基于这个「基本 LightingColorFilter 」，你就可以修改一下做出其他的 filter。比如，如果你想去掉原像素中的红色，可以把它的 `mul` 改为 `0x00ffff` （红色部分为 0 ） ，那么它的计算过程就是：
+
+```java
+R' = R * 0x0 / 0xff + 0x0 = 0 // 红色被移除  
+G' = G * 0xff / 0xff + 0x0 = G  
+B' = B * 0xff / 0xff + 0x0 = B  
+```
+
+### PorterDuffColorFilter
+
+这个 `PorterDuffColorFilter` 的作用是使用一个指定的颜色和一种指定的 `PorterDuff.Mode` 来与绘制对象进行合成。它的构造方法是 `PorterDuffColorFilter(int color, PorterDuff.Mode mode)` 其中的 `color` 参数是指定的颜色， `mode` 参数是指定的 `Mode`。同样也是 `PorterDuff.Mode` ，不过和 `ComposeShader` 不同的是，`PorterDuffColorFilter` 作为一个 `ColorFilter`，只能指定一种颜色作为源，而不是一个 `Bitmap`
+
+### ColorMatrixColorFilter
+
+`ColorMatrixColorFilter` 使用一个 `ColorMatrix` 来对颜色进行处理。 `ColorMatrix` 这个类，内部是一个 4x5 的矩阵：
+
+```java
+[ a, b, c, d, e,
+  f, g, h, i, j,
+  k, l, m, n, o,
+  p, q, r, s, t ]
+```
+
+通过计算， `ColorMatrix` 可以把要绘制的像素进行转换。对于颜色 [R, G, B, A] ，转换算法是这样的：
+
+```java
+R’ = a*R + b*G + c*B + d*A + e;  
+G’ = f*R + g*G + h*B + i*A + j;  
+B’ = k*R + l*G + m*B + n*A + o;  
+A’ = p*R + q*G + r*B + s*A + t;  
+```
+
+`ColorMatrix` 有一些自带的方法可以做简单的转换，例如可以使用 `setSaturation(float sat)` 来设置饱和度；另外你也可以自己去设置它的每一个元素来对转换效果做精细调整。 
