@@ -148,3 +148,21 @@ pi允许Verifier持有公钥PK以验证beta是否是基于PK下的alpha的正确
 此外，beta对于知道对应于alpha的**pi**的任何一方而言看起来都不是随机的，即使该方不知道SK。通过检查`VRF_verify（PK，alpha，pi）`是否返回（VALID，beta），这样的人也可以容易地将beta与随机值区分开。
 
 此外，如果VRF密钥生成没有以值得信赖的方式进行，则VRF输出beta可能看起来不随机。 （例如生成的VRF密钥具有较差的随机性）
+
+#### A random-oracle-like unpredictability property
+
+主要说的是不可预测性及其条件
+
+如果VRF密钥是异常生成的，则伪随机性不成立。例如，如果对手输出确定性生成（或硬编码且公知）的VRF密钥，则输出很容易由任何人导出。然而，在某些VRF应用中需要不同类型的不可预测性（例如[GHMVZ17]和[KRDO17]）。该属性类似于（普通的，未加密的）加密散列函数所实现的不可预测性：如果输入具有足够的熵（即，不能被预测），则正确的输出几乎是均匀的。虽然加密文献中既没有出现正式定义也没有出现这种属性的证据，但如果公钥是以可信赖的方式生成的，则本说明书中提出的VRF方案被认为满足该属性。此外，只要公钥满足第5.6节中的密钥验证程序，即使公钥不以可靠的方式生成，ECVRF也会满足此属性。
+
+### RSA Full Domain Hash VRF (RSA-FDH-VRF)
+
+满足的特性：
+
+- Trusted Uniqueness
+- Trusted Collision Resistance
+- Full Pseudorandomness
+
+安全性符合standard RSA assumption in the random oracle model
+
+使用所选散列算法参数化的RSA全域散列算法[RFC8017]，将计算出的pi作为alpha上的确定性RSA签名。 RSA签名验证用于验证pi的正确性。 通过用所选择的散列算法对证明pi进行散列来简单地获得输出beta。
